@@ -1,9 +1,9 @@
 ###################################################################################################
 #
-# MiniMetroClasses.py
+# Emergenza.py
 # Contains classes and some functions and constants for Mini Metro
 #
-# Kevin Qiao - January 20, 2019
+# Remake - April 20, 2023
 #
 ###################################################################################################
 
@@ -16,7 +16,7 @@ import TimeClass as Time
 pygame.init()
 
 COLOURS = {"background": (0, 94, 184),
-           "river": (155, 118, 83),
+           "road": (155, 118, 83),
            "blackInside": (45, 45, 45),
            "whiteOutline": (217, 217, 217),
            "lines": ((254, 201, 9),
@@ -37,9 +37,9 @@ PENTAGON = 6
 HEXAGON = 7
 STAR = 8
 
-CARRIAGE = 0
+CARRIAGE = 2
 LINE = 1
-TRAIN = 2
+CAR = 2
 TUNNEL = 3
 
 # units are in world pixels
@@ -56,7 +56,7 @@ RESOURCE_GAIN_DELAY = 90  # time between each resource gain event
 def _isValidSpawn(x, y, stops, mapSurface):
     # Returns True or False depending on whether or not the given
     # point (x, y) is a valid stop location on the given map
-    if tuple(mapSurface.get_at((x, y))[:3]) == COLOURS.get("river"):
+    if tuple(mapSurface.get_at((x, y))[:3]) == COLOURS.get("road"):
         return False
     for stop in stops:
         if stop.withinRadius(x, y, STOP_DISTANCE):
@@ -89,9 +89,9 @@ class World(object):
     def __init__(self, mapSurface, stopSize=30, passengerSize=10):
         self.stops = []
         self.lines = []
-        self.trains = []
+        self.cars = []
         self.carriages = []
-        self.trainSpeed = 1
+        self.carSpeed = 1
         self._map = mapSurface
         self.stopSize = stopSize
         self.passengerSize = passengerSize
@@ -232,27 +232,27 @@ class World(object):
                 return i
         return -1
 
-    def getClickedTrainLine(self, colour):
-        # get the line that the clicked train is on
+    def getClickedCarLine(self, colour):
+        # get the line that the clicked car is on
         for i, item in enumerate(self.lines):
             if colour == item.BRIGHTER_COLOUR:
                 return i
         return -1
 
-    def getClickedTrain(self, mouseView, line):
-        # get a train or carriage on a line
-        trains = self.lines[line].trains
-        for train in trains:
-            if train.rect.collidepoint(mouseView):
-                return train, "train"
-            for carriage in train.carriages:
+    def getClickedCar(self, mouseView, line):
+        # get a car or carriage on a line
+        cars = self.lines[line].cars
+        for car in cars:
+            if car.rect.collidepoint(mouseView):
+                return car, "car"
+            for carriage in car.carriages:
                 if carriage.rect.collidepoint(mouseView):
                     return carriage, "carriage"
         for abandonedLine in self.lines[line].abandonedChildren:
-            for train in abandonedLine.trains:
-                if train.rect.collidepoint(mouseView):
-                    return train, "train"
-                for carriage in train.carriages:
+            for car in abandonedLine.cars:
+                if car.rect.collidepoint(mouseView):
+                    return car, "car"
+                for carriage in car.carriages:
                     if carriage.rect.collidepoint(mouseView):
                         return carriage, "carriage"
         return -1
@@ -261,16 +261,16 @@ class World(object):
         # remove a line and everything on it
         childLines = self.lines[index].abandonedChildren
         for i in range(len(childLines)-1, -1, -1):
-            for j in range(len(childLines[i].trains)-1, -1, -1):
-                for carriage in childLines[i].trains[j].carriages:
+            for j in range(len(childLines[i].cars)-1, -1, -1):
+                for carriage in childLines[i].cars[j].carriages:
                     self.resources[CARRIAGE] = self.resources[CARRIAGE]+1
                     self.carriages.remove(carriage)
-                    childLines[i].trains[j].carriages.remove(carriage)
+                    childLines[i].cars[j].carriages.remove(carriage)
                     carriage.remove()
-                self.trains.remove(childLines[i].trains[j])
-                self.resources[TRAIN] = self.resources[TRAIN]+1
-                childLines[i].trains[j].remove()
-                childLines[i].trains.pop(j)
+                self.cars.remove(childLines[i].cars[j])
+                self.resources[CAR] = self.resources[CAR]+1
+                childLines[i].cars[j].remove()
+                childLines[i].cars.pop(j)
             self.lines[index].abandonedChildren.pop(i)
         self.lines.pop(index)
         self.resources[LINE] = self.resources[LINE]+1
@@ -286,7 +286,7 @@ class Stop(object):
         self.timer = timer
         self.usingTimer = False
         self.timer.toggleActive()
-        self.trains = []  # trains stopped at the stop
+        self.cars = []  # cars stopped at the stop
         self.lines = []  # lines that pass through this stop
 
     def __eq__(self, other):
@@ -380,14 +380,14 @@ class Stop(object):
         self.passengers.append(
             Passenger(random.choice(shapes), passengerSurfaces))
 
-    def processTrain(self, train, trainsToMove):
+    def processCar(self, car, carsToMove):
         # load or unload passengers that can move
-        for carriage in train.carriages:
-            if carriage.movingClone in trainsToMove:
-                return self.movePassenger(train, True)
-        if train in trainsToMove or train.movingClone in trainsToMove:
-            return self.movePassenger(train, True)
-        return self.movePassenger(train, False)
+        for carriage in car.carriages:
+            if carriage.movingClone in carsToMove:
+                return self.movePassenger(car, True)
+        if car in carsToMove or car.movingClone in carsToMove:
+            return self.movePassenger(car, True)
+        return self.movePassenger(car, False)
 
     def isValidTransfer(self, path, transfer):
         # if the transfer's line has already been visited,
@@ -414,29 +414,29 @@ class Stop(object):
                     return foundPath
         return -1
 
-    def findValidPassenger(self, train):
+    def findValidPassenger(self, car):
         for i, item in enumerate(self.passengers):
             # first, see if the stop it wants to go to
-            # is reachable by train without the train needing
+            # is reachable by car without the car needing
             # to reverse direction
             foundPath = len(item.path) > 0
-            if (train.direction == 1
-                    and (item.SHAPE in train.line.stopNums[train.segmentNum:]
+            if (car.direction == 1
+                    and (item.SHAPE in car.line.stopNums[car.segmentNum:]
                         or (foundPath
-                            and item.path[1][0] > train.segmentNum
-                            and train in item.path[0][1].trains))):
+                            and item.path[1][0] > car.segmentNum
+                            and car in item.path[0][1].cars))):
                 return i
-            if (train.direction == -1
-                and (item.SHAPE in train.line.stopNums[:train.segmentNum+1]
+            if (car.direction == -1
+                and (item.SHAPE in car.line.stopNums[:car.segmentNum+1]
                     or (foundPath
-                        and item.path[1][0] <= train.segmentNum
-                        and train in item.path[0][1].trains))):
+                        and item.path[1][0] <= car.segmentNum
+                        and car in item.path[0][1].cars))):
                 return i
             # then, check all lines directly accessible to the passenger/stop
             if not foundPath:
                 for line in self.lines:
                     if item.SHAPE in line.stopNums:
-                        foundPath = True  # do nothing, wait until the right train comes
+                        foundPath = True  # do nothing, wait until the right car comes
             # finally, if all else fails, find a path along the whole network
             if not foundPath:
                 for line in self.lines:
@@ -444,49 +444,49 @@ class Stop(object):
                     path = self.findPath(line, item, list(path))
                     if path != -1:
                         item.path = path
-                        if (train.direction == 1
-                                and item.path[1][0] > train.segmentNum):
+                        if (car.direction == 1
+                                and item.path[1][0] > car.segmentNum):
                             return i
-                        if (train.direction == -1
-                                and item.path[1][0] <= train.segmentNum):
+                        if (car.direction == -1
+                                and item.path[1][0] <= car.segmentNum):
                             return i
         return -1
 
-    def movePassenger(self, train, shouldUnload):
+    def movePassenger(self, car, shouldUnload):
         # move a single passenger
         index = -1
-        for i, item in enumerate(train.passengers):
+        for i, item in enumerate(car.passengers):
             if (self.shape == item.SHAPE
                     or (len(item.path) > 0
                         and item.path[1][1] in self.lines)):
                 index = i
         if index > -1:
-            # if a passenger was found that can be moved off the train, move it
-            if len(train.passengers[index].path) > 0:
-                train.passengers[index].path.pop(0)
-                if train.passengers[index].path[-1][1] in self.lines:
-                    train.passengers[index].path = []
-                self.passengers.append(train.passengers.pop(index))
+            # if a passenger was found that can be moved off the car, move it
+            if len(car.passengers[index].path) > 0:
+                car.passengers[index].path.pop(0)
+                if car.passengers[index].path[-1][1] in self.lines:
+                    car.passengers[index].path = []
+                self.passengers.append(car.passengers.pop(index))
                 return 0
-            train.passengers.pop(index)
+            car.passengers.pop(index)
             return 1  # one passenger has been moved
         elif shouldUnload:
-            # if the train or carriage should be moved to another line, it
+            # if the car or carriage should be moved to another line, it
             # can't have any passengers on it, so unload move them off
-            if len(train.passengers) > 0:
-                self.passengers.append(train.passengers.pop())
+            if len(car.passengers) > 0:
+                self.passengers.append(car.passengers.pop())
             return 0
-            # self.passengers.append(train.passengers.pop())
+            # self.passengers.append(car.passengers.pop())
             # return 0
-        index = self.findValidPassenger(train)
-        # if a passenger was found that can be moved onto the train, move it
+        index = self.findValidPassenger(car)
+        # if a passenger was found that can be moved onto the car, move it
         if (index > -1
-                and len(train.passengers) < (len(train.carriages)*6)+6):
-            train.passengers.append(self.passengers.pop(index))
+                and len(car.passengers) < (len(car.carriages)*6)+6):
+            car.passengers.append(self.passengers.pop(index))
         else:
             # no passengers can be moved
-            if train.setMoving(True):
-                self.trains.remove(train)
+            if car.setMoving(True):
+                self.cars.remove(car)
         return 0
 
 
@@ -516,7 +516,7 @@ class Line(object):
                             max(self._COLOUR[2]-50, 0))
 
         # holds lines that were split from this parent line
-        # and are considered "abandoned". all trains on a
+        # and are considered "abandoned". all cars on a
         # segment that was split into a child line get
         # moved to the child line and the moment they leave,
         # the abandoned line is deleted
@@ -535,7 +535,7 @@ class Line(object):
         self.mouseSegments = []
         self.isMoving = False  # if the mouse is moving the line
 
-        self.trains = []
+        self.cars = []
 
     def draw(self, targetSurface, width, offset):
         for segment in self.tempSegments+self.segments:
@@ -609,7 +609,7 @@ class Line(object):
         # commit changes made during editing and fix values that changed
         # updateTransfers = True: update everything, and update the lines that
         # get marked as transfers from this line with updateTransfers = False
-        # updateTransfers = False: only update the line, no trains, and
+        # updateTransfers = False: only update the line, no cars, and
         # do not continue to call update on lines that get marked as transfers
         if len(self.segments) > 0:
             if self in self.segments[0].firstPoint.lines:
@@ -620,7 +620,7 @@ class Line(object):
         self.transfers = []
 
         if updateTransfers:
-            self.updateTrainIndices()
+            self.updateCarIndices()
         for i in range(len(self._abandonedSegments)-1, -1, -1):
             self._abandonedSegments.pop(i)
         for i in range(len(self.tempSegments)-1, -1, -1):
@@ -824,7 +824,7 @@ class Line(object):
         mouseSegment.firstPoint = stop
         self._newStops.append(stop)
 
-    def updateTrainIndices(self):
+    def updateCarIndices(self):
         abandonedIndices = []
         for abandonedSegment in self._abandonedSegments:
             abandonedIndices.append(abandonedSegment.index)
@@ -839,36 +839,36 @@ class Line(object):
                 mouseIndices.append(mouseSegment.index)
         # change in number of stops
         deltaLength = len(self._newStops)-len(self._removedStops)
-        for i in range(len(self.trains)-1, -1, -1):
+        for i in range(len(self.cars)-1, -1, -1):
             # [true if any part is on an abandoned segment,
-            # true if train head is on an abandoned segment]
+            # true if car head is on an abandoned segment]
             isOnAbandonedSegment = [False, False]
-            if (self.trains[i].segmentNum in abandonedIndices
-                    and self.trains[i].line == self):
+            if (self.cars[i].segmentNum in abandonedIndices
+                    and self.cars[i].line == self):
                 isOnAbandonedSegment = [True, True]
-            for carriage in self.trains[i].carriages:
+            for carriage in self.cars[i].carriages:
                 if carriage.segmentNum in abandonedIndices and carriage.line == self:
                     isOnAbandonedSegment[0] = True
             if isOnAbandonedSegment[0]:
-                # if the segment the train was on got removed from
-                # this line, switch the train onto the abandoned line
-                self.createAbandonedChildren(self.trains[i], abandonedIndices)
-            # if the changes were after this train,
+                # if the segment the car was on got removed from
+                # this line, switch the car onto the abandoned line
+                self.createAbandonedChildren(self.cars[i], abandonedIndices)
+            # if the changes were after this car,
             # nothing needs to be done to indices
-            # if the changes were all before this train,
+            # if the changes were all before this car,
             # add the delta of stops to the index
             if (not isOnAbandonedSegment[1]
-                    and (self.trains[i].segmentNum > max(mouseIndices)
-                        or self.trains[i].segmentNum > max(abandonedIndices))):
-                self.trains[i].segmentNum = self.trains[i].segmentNum+deltaLength
-            for carriage in self.trains[i].carriages:
+                    and (self.cars[i].segmentNum > max(mouseIndices)
+                        or self.cars[i].segmentNum > max(abandonedIndices))):
+                self.cars[i].segmentNum = self.cars[i].segmentNum+deltaLength
+            for carriage in self.cars[i].carriages:
                 if (carriage.segmentNum > max(mouseIndices)
                         or carriage.segmentNum > max(abandonedIndices)):
                     carriage.segmentNum = carriage.segmentNum+deltaLength
             if isOnAbandonedSegment[1]:
-                self.trains.pop(i)
+                self.cars.pop(i)
 
-    def createAbandonedChildren(self, train, indices):
+    def createAbandonedChildren(self, car, indices):
         abandonedLine = Line(self.LINE_NUMBER)
         abandonedLine.isAbandoned = True
         abandonedLine.parentLine = self
@@ -884,11 +884,11 @@ class Line(object):
                 index = index+1
             abandonedLine.segments.insert(index, self._abandonedSegments[i])
         self.abandonedChildren.append(abandonedLine)
-        if train.segmentNum in indices:
-            train.line = abandonedLine
-            abandonedLine.trains.append(train)
-            train.segmentNum = train.segmentNum-min(indices)
-        for carriage in train.carriages:
+        if car.segmentNum in indices:
+            car.line = abandonedLine
+            abandonedLine.cars.append(car)
+            car.segmentNum = car.segmentNum-min(indices)
+        for carriage in car.carriages:
             if carriage.segmentNum in indices:
                 carriage.line = abandonedLine
                 carriage.segmentNum = carriage.segmentNum-min(indices)
@@ -946,7 +946,7 @@ class Segment(object):
     def checkOverWater(self, worldSurface):
         # check a few points on the segment to see if they are over water
         for step in self.getPointsAlongSegment(20):
-            if worldSurface.get_at((int(step[0]), int(step[1]))) == COLOURS.get("river"):
+            if worldSurface.get_at((int(step[0]), int(step[1]))) == COLOURS.get("road"):
                 self.isTunnel = True
                 return True
         self.isTunnel = False
@@ -965,12 +965,12 @@ class Segment(object):
         # return the ones over water
         points = self.getPointsAlongSegment(interval)
         for i in range(len(points)-1, -1, -1):
-            if worldSurface.get_at((int(points[i][0]), int(points[i][1]))) != COLOURS.get("river"):
+            if worldSurface.get_at((int(points[i][0]), int(points[i][1]))) != COLOURS.get("road"):
                 points.pop(i)
         return points
 
     def drawTunnel(self, targetSurface, width, offset, worldSurface, interval):
-        colour = COLOURS.get("river")
+        colour = COLOURS.get("road")
         steps = self.getPointsOverWater(interval, worldSurface)
         for step in steps:
             viewCoords = getViewCoords(step[0], step[1], offset)
@@ -1028,7 +1028,7 @@ class MouseSegment(Segment):
         self.lastPoint.updateWithView(mouse, offset)
 
 
-class Train(object):
+class Car(object):
     def __init__(self, x, y, speed):
         self.passengers = []
         self.carriages = []
@@ -1054,18 +1054,18 @@ class Train(object):
         self._x, self._y = mouseObject.getWorld()
 
     def startMouseMove(self):
-        # when the train is already on a line and being moved
+        # when the car is already on a line and being moved
         self._colour = self.line.DARKER_COLOUR
         self.movingClone = copy.copy(self)
         self.movingClone.snapToLine(self.line, self.segmentNum)
 
     def moveLines(self, offset, passengerSize):
-        # moves this train to the movingClone
-        self.line.trains.remove(self)
+        # moves this car to the movingClone
+        self.line.cars.remove(self)
         movingClone = self.movingClone
         self = copy.copy(movingClone)
-        movingClone.line.trains.remove(movingClone)
-        self.line.trains.append(self)
+        movingClone.line.cars.remove(movingClone)
+        self.line.cars.append(self)
         self.placeOnLine()
         self.movingClone = None
         carriages = self.carriages
@@ -1074,8 +1074,8 @@ class Train(object):
             carriages[i].moveLines(self, i, offset, passengerSize)
         # copy.copy to make the clone and set self to the clone
         # causes self to point to a new memory address, but the
-        # trains do not have any concept of the world, and the
-        # for loop that controls the trains uses the trains in the
+        # cars do not have any concept of the world, and the
+        # for loop that controls the cars uses the cars in the
         # world. since the address the world knows is now
         # incorrect, return self so that the world can correct
         # the address
@@ -1086,7 +1086,7 @@ class Train(object):
         self.movingClone = None
 
     def snapToLine(self, line, segmentNum):
-        if len(line.trains) > 3:
+        if len(line.cars) > 3:
             self.unsnapFromLine()
             return
         self.isOnSegment = True
@@ -1095,7 +1095,7 @@ class Train(object):
         self._angle = line.segments[segmentNum].angle
         self._colour = line.DARKER_COLOUR
 
-        # visually snap the train to the line
+        # visually snap the car to the line
         segment = self.line.segments[segmentNum]
         # clamp x coordinates to be within the domain of the segment
         if segment.firstPoint.X <= segment.lastPoint.X:
@@ -1110,12 +1110,12 @@ class Train(object):
         self._y = (math.tan(self._angle)
                    * (self._x-segment.firstPoint.X)
                 + segment.firstPoint.Y)
-        if self not in self.line.trains:
-            self.line.trains.append(self)
+        if self not in self.line.cars:
+            self.line.cars.append(self)
 
     def unsnapFromLine(self):
-        if self.line is not None and self in self.line.trains:
-            self.line.trains.remove(self)
+        if self.line is not None and self in self.line.cars:
+            self.line.cars.remove(self)
         self.isOnSegment = False
         self._angle = 0
         self._colour = COLOURS.get("whiteOutline")
@@ -1156,9 +1156,9 @@ class Train(object):
                 self.segmentNum = segments[0]
                 if (self.line.segments[0].firstPoint
                         == self.line.parentLine.segments[0].firstPoint):
-                    # change the segment number so that the train will change direction
+                    # change the segment number so that the car will change direction
                     # if the beginning of the abandoned segment is the beginning of the
-                    # parent line and the train is about to move off to the beginning
+                    # parent line and the car is about to move off to the beginning
                     # of the line
                     self.segmentNum = self.segmentNum+self.direction
             else:
@@ -1178,12 +1178,12 @@ class Train(object):
                 return
         else:
             return
-        self.line.trains.remove(self)
+        self.line.cars.remove(self)
         self.line = self.line.parentLine
-        self.line.trains.append(self)
+        self.line.cars.append(self)
 
     def move(self, offset, passengerSize):
-        # if the train has moved past the segment, move it to the next segment or attach
+        # if the car has moved past the segment, move it to the next segment or attach
         # it to the stop it is at
         if self._segmentDistance >= self.line.segments[self.segmentNum].length:
             self.segmentNum = self.segmentNum+self.direction
@@ -1205,7 +1205,7 @@ class Train(object):
                 self._angle = self.line.segments[self.segmentNum].angle
                 self.stop = self.line.segments[self.segmentNum].lastPoint
             if len(self.stop.passengers) > 0 or len(self.passengers) > 0:
-                self.stop.trains.append(self)
+                self.stop.cars.append(self)
                 self.setMoving(False)
 
         self._x = self._x + -self._speed*math.cos(self._angle)
@@ -1217,13 +1217,13 @@ class Train(object):
 
     def setMoving(self, state):
         if state:
-            for train in self.line.trains:
-                if (train is not self
-                        and train.segmentNum == self.segmentNum
-                        and train.direction == self.direction
-                        and train.canMove):
-                    # to prevent trains all moving in the same place,
-                    # stop the train from moving if there is a train
+            for car in self.line.cars:
+                if (car is not self
+                        and car.segmentNum == self.segmentNum
+                        and car.direction == self.direction
+                        and car.canMove):
+                    # to prevent cars all moving in the same place,
+                    # stop the car from moving if there is a car
                     # on the segment it is about to go on
                     return False  # the intended setMoving operation did not complete
         self.canMove = state
@@ -1250,7 +1250,7 @@ class Train(object):
 
     def drawAllPassengers(self, targetSurface, rect, passengerSize, offset):
         # rect[1] (from the draw() method) is a list of points that
-        # passengers would be drawn at if the train was centered
+        # passengers would be drawn at if the car was centered
         # around the origin, so rotate and translate the points
         viewRect = copy.deepcopy(rect[1])
         centerView = getViewCoords(self._x, self._y, offset)
@@ -1292,25 +1292,25 @@ class Train(object):
                                         rect)
 
 
-class Carriage(Train):
+class Carriage(Car):
     def __init__(self, x, y, speed):
-        Train.__init__(self, x, y, speed)
-        # carriage - follows a train/carriage and can be followed by a carriage
-        # holds people, adds capacity to a parent train
+        Car.__init__(self, x, y, speed)
+        # carriage - follows a car/carriage and can be followed by a carriage
+        # holds people, adds capacity to a parent car
         self.tail = None  # the carriage that follows this
         self._segmentDistance = 0
 
-    def attachToNearestTrain(self):
-        # find the closest train on the line the
+    def attachToNearestCar(self):
+        # find the closest car on the line the
         # carriage is on
         lowestDistance = [10000000, -1]
-        for i, item in enumerate(self.line.trains):
+        for i, item in enumerate(self.line.cars):
             distance = findDistance(item.getPosition(),
                                     self.getPosition())
             if distance < lowestDistance[0]:
                 lowestDistance = [distance, i]
-        if lowestDistance[1] != -1 and len(self.line.trains[lowestDistance[1]].carriages) < 4:
-            self.head = self.line.trains[lowestDistance[1]]
+        if lowestDistance[1] != -1 and len(self.line.cars[lowestDistance[1]].carriages) < 4:
+            self.head = self.line.cars[lowestDistance[1]]
             self._speed = self.head._speed
             self.isOnSegment = True
         else:
@@ -1325,18 +1325,18 @@ class Carriage(Train):
     def snapToLine(self, line):
         self.line = line
         self._colour = line.DARKER_COLOUR
-        self.attachToNearestTrain()
+        self.attachToNearestCar()
 
-    def moveLines(self, train, index, offset, passengerSize):
-        # index is the position of the carriage in the train
+    def moveLines(self, car, index, offset, passengerSize):
+        # index is the position of the carriage in the car
         # e.g. first carriage, second carriage
         # remove element from linked list
         self.findFirst().carriages.remove(self)
         self.head.tail = self.tail
         if self.tail is not None:
             self.tail.head = self.head
-        self.line = train.line
-        self.head = train
+        self.line = car.line
+        self.head = car
         self.movingClone = None
         self.isOnSegment = True
         self.placeOnLine(True, offset, passengerSize)
@@ -1348,9 +1348,9 @@ class Carriage(Train):
         self.head = None
         self.tail = None
 
-    def placeOnLine(self, shouldAppendToTrain, offset, passengerSize):
-        # operations on the train before propertly setting head
-        if shouldAppendToTrain:
+    def placeOnLine(self, shouldAppendToCar, offset, passengerSize):
+        # operations on the car before propertly setting head
+        if shouldAppendToCar:
             self.head.carriages.append(self)
             if len(self.head.carriages) > 1:
                 self.head = self.head.findLast()

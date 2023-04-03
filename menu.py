@@ -5,6 +5,8 @@ import pygame.font
 import pygame.gfxdraw
 import MiniMetroClasses as Game
 import TimeClass as Time
+import sys
+import os
 
 pygame.init()
 pygame.font.init()
@@ -19,40 +21,16 @@ class Button:
         self.font_color = font_color
         self.rect_color = rect_color
 
+    #method
     def draw(self, surface):
         pygame.draw.rect(surface, self.rect_color, self.rect)
         text_surface = self.font.render(self.text, True, self.font_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
 
+    #method
     def is_clicked(self, pos):
         return self.rect.collidepoint(pos)
-
-
-# class LoadingScreen:
-#     def __init__(self, screen):
-#         self.screen = screen
-#         self.screen_width, self.screen_height = screen.get_size()
-#         self.background_color = (0, 0, 0)
-#         self.font = pygame.font.SysFont(None, 50)
-#         self.text = "Tap to Continue"
-#         self.text_color = (255, 255, 255)
-#         self.text_surface = self.font.render(self.text, True, self.text_color)
-#         self.text_rect = self.text_surface.get_rect(
-#             center=(self.screen_width // 2, self.screen_height // 2))
-
-#     def run(self):
-#         while True:
-#             for event in pygame.event.get():
-#                 if event.type == pygame.QUIT:
-#                     pygame.quit()
-#                     exit()
-#                 if event.type == pygame.MOUSEBUTTONDOWN:
-#                     return True
-
-#             self.screen.fill(self.background_color)
-#             self.screen.blit(self.text_surface, self.text_rect)
-#             pygame.display.update()
 
 
 class StartMenu:
@@ -105,7 +83,7 @@ class StartMenu:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     for button in self.buttons:
                         if button.is_clicked(event.pos):
-                            if button.text == "Mulai":
+                            if button.text == "Mulai": #drd
                                 # camera (display) coordinates
                                 cWidth = 800
                                 cHeight = 600
@@ -124,6 +102,8 @@ class StartMenu:
                                     "assets/fonts/Ubuntu-Light.ttf", 30)
                                 ubuntuBold30 = pygame.font.Font(
                                     "assets/fonts/Ubuntu-Bold.ttf", 30)
+                                ubuntuBold40 = pygame.font.Font(
+                                    "assets/fonts/Ubuntu-Bold.ttf", 40)
                                 ubuntu70 = pygame.font.Font(
                                     "assets/fonts/Ubuntu-Regular.ttf", 70)
 
@@ -173,7 +153,7 @@ class StartMenu:
                                 PASSENGER_ICON = pygame.transform.scale(PASSENGER_ICON, (24, 28))
 
 
-                                RIVERS = [pygame.image.load("assets/maps/backgourdn.png").convert_alpha(),
+                                ROADS = [pygame.image.load("assets/maps/backgourdn.png").convert_alpha(),
                                           pygame.image.load(
                                     "assets/maps/backgourdn.png").convert_alpha(),
                                     pygame.image.load(
@@ -188,16 +168,16 @@ class StartMenu:
                                     pygame.image.load("assets/icons/tunnel.png").convert_alpha()]
 
                                 # pick and place a map
-                                river = random.randint(0, 3)
+                                road = random.randint(0, 3)
                                 # top y value
-                                riverY = random.randint(wHeight/2-cHeight/3-RIVERS[river].get_height(),
-                                                        wHeight/2+cHeight/3-RIVERS[river].get_height())
+                                roadY = random.randint(wHeight/2-cHeight/3-ROADS[road].get_height(),
+                                                        wHeight/2+cHeight/3-ROADS[road].get_height())
                                 # leftmost x value
                                 # 2000 is the width of the images
-                                riverX = random.randint(wWidth-2000, 3000)
+                                roadX = random.randint(wWidth-2000, 3000)
 
                                 worldSurface.blit(
-                                    RIVERS[river], (riverX, riverY))
+                                    ROADS[road], (roadX, roadY))
                                 world = Game.World(worldSurface)
                                 validStops = [Game.CIRCLE,
                                               Game.TRIANGLE, Game.SQUARE]
@@ -215,7 +195,7 @@ class StartMenu:
                                                                                     (int(world.stopSize*1.5),
                                                                                      int(world.stopSize*1.5))))
 
-                                # point list for drawing trains and carriages
+                                # point list for drawing cars and carriages
                                 rectPoints = [[[-world.passengerSize*1.5, world.passengerSize],
                                                [world.passengerSize*1.5,
                                                 world.passengerSize],
@@ -230,7 +210,8 @@ class StartMenu:
                                                   world.passengerSize/2],
                                                [0, -world.passengerSize/2],
                                                [-world.passengerSize, -world.passengerSize/2]]]
-
+                                
+                                #bukan class
                                 def calculateCameraOffset(cWidth, cHeight, world):
                                     # calculate the scale and translation operations to move from
                                     # world coordinates to screen coordinates
@@ -318,7 +299,7 @@ class StartMenu:
                                           switchStopTimer, gainResourcesTimer, gameTimer, smoothScaleTimer]
 
                                 def drawBase():
-                                    # draw the background, lines, and trains
+                                    # draw the background, lines, and cars
                                     # by drawing the base before the overlay, the event processing loop
                                     # is able to detect clicks correctly as it uses colours to do initial
                                     # detection
@@ -342,13 +323,13 @@ class StartMenu:
                                         if (item.segments == []
                                                 and item.mouseSegments == []):
                                             world.lines.pop(i)
-                                    for train in world.trains:
-                                        train.draw(
+                                    for car in world.cars:
+                                        car.draw(
                                             display, rectPoints, world.passengerSize, cameraOffset)
-                                    if movingTrain != -1:
-                                        movingTrain[0].movingClone.draw(
+                                    if movingCar != -1:
+                                        movingCar[0].movingClone.draw(
                                             display, rectPoints, world.passengerSize, cameraOffset)
-                                    for movingClone in trainsToMove:
+                                    for movingClone in carsToMove:
                                         movingClone.draw(display, rectPoints,
                                                          world.passengerSize, cameraOffset)
 
@@ -358,8 +339,8 @@ class StartMenu:
 
                                 def drawOverlay():
                                     # draw all superimposed elements to the screen
-                                    for train in world.trains:
-                                        train.drawAllPassengers(display, rectPoints,
+                                    for car in world.cars:
+                                        car.drawAllPassengers(display, rectPoints,
                                                                 world.passengerSize, cameraOffset)
 
                                     numTunnels = 0
@@ -456,30 +437,63 @@ class StartMenu:
                                         for option in options:
                                             display.blit(
                                                 option[1], (option[2][0], option[2][1]))
-
+                                            
                                     if window == "end" and not isScaling:
                                         size = ubuntu70.size("Game Over")
                                         display.blit(ubuntu70.render("Game Over",
-                                                                     1,
-                                                                     Game.COLOURS.get("whiteOutline")),
-                                                     (cWidth/2-size[0]/2,
-                                                     40))
+                                                                    1,
+                                                                    Game.COLOURS.get("whiteOutline")),
+                                                    (cWidth//2-size[0]//2,
+                                                    40))
                                         size = ubuntuLight30.size(
                                             "many victims were not saved")
                                         display.blit(ubuntuLight30.render("many victims were not saved",
-                                                                          1,
-                                                                          Game.COLOURS.get("whiteOutline")),
-                                                     (cWidth/2-size[0]/2,
-                                                     120))
+                                                                        1,
+                                                                        Game.COLOURS.get("whiteOutline")),
+                                                    (cWidth//2-size[0]//2,
+                                                    120))
                                         size = ubuntuLight30.size(
                                             str(world.passengersMoved)+" Lives Saved")
                                         display.blit(ubuntuLight30.render(str(world.passengersMoved)+" Lives Saved",
-                                                                          1,
-                                                                          Game.COLOURS.get("whiteOutline")),
-                                                     (cWidth/2-size[0]/2,
-                                                     170))
+                                                                        1,
+                                                                        Game.COLOURS.get("whiteOutline")),
+                                                    (cWidth//2
+                                                    -size[0]//2,
+                                                    150))
                                         
+                                        # Render buttons
+                                        exit_text = ubuntuLight30.render("EXIT", 1, Game.COLOURS.get("whiteOutline"))
+                                        exit_rect = exit_text.get_rect(center=(cWidth/2, cHeight - 180))
+                                        restart_text = ubuntuLight30.render("RESTART", 1, Game.COLOURS.get("whiteOutline"))
+                                        restart_rect = restart_text.get_rect(center=(cWidth/2, cHeight - 150))
                                         
+                                        # Game loop
+                                        running = True
+                                        while running:
+                                            # Handle events
+                                            for event in pygame.event.get():
+                                                if event.type == pygame.QUIT:
+                                                    running = False
+                                                elif event.type == pygame.MOUSEBUTTONUP:
+                                                    # Check if the mouse clicked on a button
+                                                    if exit_rect.collidepoint(event.pos):
+                                                        running = False
+                                                    elif restart_rect.collidepoint(event.pos):
+                                                        # Restart the game , masukin kode buat nge restart
+                                                        StartMenu.run(self)
+                                                        pass
+
+                                            # Draw the buttons
+                                            display.blit(exit_text, exit_rect)
+                                            display.blit(restart_text, restart_rect)
+                                            
+
+                                            # Update the display
+                                            pygame.display.update()
+
+                                        # Quit pygame
+                                        pygame.quit()
+
 
                                     display.blit(PASSENGER_ICON, (10, 8))
                                     display.blit(ubuntuLight30.render(str(world.passengersMoved),
@@ -526,9 +540,9 @@ class StartMenu:
                                 pickingResource = False  # if the player is choosing a resource
                                 movingLine = -1          # line being edited
                                 clickedIcon = -1         # resource being added
-                                movingTrain = -1         # train/carriage being moved
-                                # holding list for trains/carriages until they can be legally moved
-                                trainsToMove = []
+                                movingCar = -1         # car/carriage being moved
+                                # holding list for cars/carriages until they can be legally moved
+                                carsToMove = []
                                 paused = False
                                 # some hitboxes get generated upon drawing,
                                 # so let them generate before they are used
@@ -551,7 +565,7 @@ class StartMenu:
                                                     display.get_at(event.pos)[:3])
                                                 clickedIcon = world.getClickedIcon(
                                                     event.pos)
-                                                movingTrain = world.getClickedTrainLine(
+                                                movingCar = world.getClickedCarLine(
                                                     display.get_at(event.pos)[:3])
                                                 mouseObject = Game.MousePosition(
                                                     event.pos, cameraOffset)
@@ -571,25 +585,25 @@ class StartMenu:
                                                         segmentToFollow = 0
                                                     else:
                                                         movingLine = -1
-                                                # if an existing train or carriage was clicked
-                                                elif movingTrain > -1:
-                                                    movingTrain = world.getClickedTrain(
-                                                        event.pos, movingTrain)
-                                                    if movingTrain != -1:
-                                                        movingTrain[0].startMouseMove(
+                                                # if an existing car or carriage was clicked
+                                                elif movingCar > -1:
+                                                    movingCar = world.getClickedCar(
+                                                        event.pos, movingCar)
+                                                    if movingCar != -1:
+                                                        movingCar[0].startMouseMove(
                                                         )
                                                 # if the carriage icon was clicked to create a new carriage
                                                 elif clickedIcon == Game.CARRIAGE and world.resources[Game.CARRIAGE] > 0:
                                                     mouseWorld = mouseObject.getWorld()
                                                     world.carriages.append(Game.Carriage(
-                                                        *mouseWorld, speed=world.trainSpeed))
+                                                        *mouseWorld, speed=world.carSpeed))
                                                     world.resources[Game.CARRIAGE] = world.resources[Game.CARRIAGE]-1
-                                                # if the train icon was clicked to create a new carriage
-                                                elif clickedIcon == Game.TRAIN and world.resources[Game.TRAIN] > 0:
+                                                # if the car icon was clicked to create a new carriage
+                                                elif clickedIcon == Game.CAR and world.resources[Game.CAR] > 0:
                                                     mouseWorld = mouseObject.getWorld()
-                                                    world.trains.append(Game.Train(*mouseWorld,
-                                                                                   speed=world.trainSpeed))
-                                                    world.resources[Game.TRAIN] = world.resources[Game.TRAIN]-1
+                                                    world.cars.append(Game.Car(*mouseWorld,
+                                                                                   speed=world.carSpeed))
+                                                    world.resources[Game.CAR] = world.resources[Game.CAR]-1
                                                 # if the new resource selection is showing
                                                 elif pickingResource:
                                                     for option in options:
@@ -659,28 +673,28 @@ class StartMenu:
                                                                                                  mouseObject,
                                                                                                  cameraOffset,
                                                                                                  worldSurface)
-                                            # if the a train is being clicked and moved, see if it can be
+                                            # if the a car is being clicked and moved, see if it can be
                                             # attached to a line
-                                            elif movingTrain != -1:
+                                            elif movingCar != -1:
                                                 mouseObject.updateWithView(
                                                     event.pos, cameraOffset)
-                                                movingTrain[0].movingClone.updateMouse(
+                                                movingCar[0].movingClone.updateMouse(
                                                     mouseObject)
                                                 segment = world.getSegmentFromWorld(mouseObject,
                                                                                     cameraOffset)
                                                 if segment != -1:
-                                                    if movingTrain[1] == "train":
-                                                        movingTrain[0].movingClone.unsnapFromLine(
+                                                    if movingCar[1] == "car":
+                                                        movingCar[0].movingClone.unsnapFromLine(
                                                         )
-                                                        movingTrain[0].movingClone.snapToLine(world.lines[segment[0]],
+                                                        movingCar[0].movingClone.snapToLine(world.lines[segment[0]],
                                                                                               segment[1])
-                                                    elif movingTrain[1] == "carriage":
-                                                        movingTrain[0].movingClone.unsnapFromLine(
+                                                    elif movingCar[1] == "carriage":
+                                                        movingCar[0].movingClone.unsnapFromLine(
                                                         )
-                                                        movingTrain[0].movingClone.snapToLine(
+                                                        movingCar[0].movingClone.snapToLine(
                                                             world.lines[segment[0]])
                                                 else:
-                                                    movingTrain[0].movingClone.unsnapFromLine(
+                                                    movingCar[0].movingClone.unsnapFromLine(
                                                     )
                                             # see if a newly created carriage can go to a line
                                             elif clickedIcon == Game.CARRIAGE:
@@ -696,22 +710,22 @@ class StartMenu:
                                                         world.lines[line])
                                                 else:
                                                     world.carriages[-1].unsnapFromLine()
-                                            # see if a newly created train can go to a line
-                                            elif clickedIcon == Game.TRAIN:
+                                            # see if a newly created car can go to a line
+                                            elif clickedIcon == Game.CAR:
                                                 mouseObject.updateWithView(
                                                     event.pos, cameraOffset)
-                                                world.trains[-1].updateMouse(
+                                                world.cars[-1].updateMouse(
                                                     mouseObject)
                                                 # we have no way of isolating which line was
                                                 # clicked on, so check every rect
                                                 segment = world.getSegmentFromWorld(mouseObject,
                                                                                     cameraOffset)
                                                 if segment != -1:
-                                                    world.trains[-1].unsnapFromLine()
-                                                    world.trains[-1].snapToLine(world.lines[segment[0]],
+                                                    world.cars[-1].unsnapFromLine()
+                                                    world.cars[-1].snapToLine(world.lines[segment[0]],
                                                                                 segment[1])
                                                 else:
-                                                    world.trains[-1].unsnapFromLine()
+                                                    world.cars[-1].unsnapFromLine()
                                         elif event.type == pygame.MOUSEBUTTONUP:
                                             if event.button == 1:
                                                 # commit changes made by the line being edited
@@ -732,18 +746,18 @@ class StartMenu:
                                                         if len(world.lines[i].segments) == 0:
                                                             world.removeLine(
                                                                 i)
-                                                # queue an operation to move the train
-                                                elif movingTrain != -1:
-                                                    if movingTrain[0].movingClone.isOnSegment:
-                                                        trainsToMove.append(
-                                                            movingTrain[0].movingClone)
+                                                # queue an operation to move the car
+                                                elif movingCar != -1:
+                                                    if movingCar[0].movingClone.isOnSegment:
+                                                        carsToMove.append(
+                                                            movingCar[0].movingClone)
                                                     elif world.getClickedIcon(event.pos) > -1:
-                                                        trainsToMove.append(
-                                                            movingTrain[0])
+                                                        carsToMove.append(
+                                                            movingCar[0])
                                                     else:
-                                                        movingTrain[0].stopMouseMove(
+                                                        movingCar[0].stopMouseMove(
                                                         )
-                                                    movingTrain = -1
+                                                    movingCar = -1
                                                 # create a new carriage on the line it was placed on
                                                 elif clickedIcon == Game.CARRIAGE:
                                                     if world.carriages[-1].isOnSegment:
@@ -753,20 +767,20 @@ class StartMenu:
                                                         world.carriages.pop()
                                                         world.resources[Game.CARRIAGE] = world.resources[Game.CARRIAGE]+1
                                                     clickedIcon = -1
-                                                # create a new train on the line it was placed on
-                                                elif clickedIcon == Game.TRAIN:
-                                                    if world.trains[-1].isOnSegment:
-                                                        world.trains[-1].placeOnLine()
+                                                # create a new car on the line it was placed on
+                                                elif clickedIcon == Game.CAR:
+                                                    if world.cars[-1].isOnSegment:
+                                                        world.cars[-1].placeOnLine()
                                                     else:
-                                                        world.trains.pop()
-                                                        world.resources[Game.TRAIN] = world.resources[Game.TRAIN]+1
+                                                        world.cars.pop()
+                                                        world.resources[Game.CAR] = world.resources[Game.CAR]+1
                                                     clickedIcon = -1
                                         # elif event.type == pygame.USEREVENT:  # music is done
                                         #     pygame.mixer.music.load(MUSIC[random.randint(0, 2)])
                                         #     pygame.mixer.music.play()
 
                                     newStopTimer.tick()
-                                    # if the timer to create a new stop has ended
+                                    # if the timer to create a new stop has ed
                                     if newStopTimer.checkTimer(not doneScaling, getNewStopTime(world.passengersMoved)):
                                         stop = random.randint(0, 99)
                                         if stop < 55:  # 55% chance of making a circle stop
@@ -866,9 +880,9 @@ class StartMenu:
                                     # timer that synchronizes and adds delay to all movements to/from stops
                                     if passengerMoveTimer.checkTimer(True, getPassengerMoveTime(world.passengersMoved)):
                                         for stop in world.stops:
-                                            for train in stop.trains:
+                                            for car in stop.cars:
                                                 world.passengersMoved = (world.passengersMoved
-                                                                         + stop.processTrain(train, trainsToMove))
+                                                                         + stop.processCar(car, carsToMove))
                                             # start counting up with timers on stops if they are overcrowing
                                             if len(stop.passengers) > 6:
                                                 if not stop.usingTimer:
@@ -921,65 +935,65 @@ class StartMenu:
                                     # (since the scaling animation is limited by the cpu and
                                     # using multithreading is overkill)
                                     for tick in range(int(timeElapsed/getGameTimerTime(world.passengersMoved))):
-                                        for i in range(len(world.trains)-1, -1, -1):
-                                            # move trains
-                                            if world.trains[i].canMove:
-                                                world.trains[i].move(
+                                        for i in range(len(world.cars)-1, -1, -1):
+                                            # move cars
+                                            if world.cars[i].canMove:
+                                                world.cars[i].move(
                                                     cameraOffset, world.passengerSize)
-                                            # if there are no passengers on the train and the train
-                                            # is in the list to move trains, move it
-                                            if len(world.trains[i].passengers) == 0:
+                                            # if there are no passengers on the car and the car
+                                            # is in the list to move cars, move it
+                                            if len(world.cars[i].passengers) == 0:
                                                 # if the moving clone is in the list, that means it needs to
                                                 # be moved into another line
-                                                if world.trains[i].movingClone in trainsToMove:
-                                                    trainsToMove.remove(
-                                                        world.trains[i].movingClone)
-                                                    if (world.trains[i].stop is not None
-                                                            and world.trains[i] in world.trains[i].stop.trains):
-                                                        world.trains[i].stop.trains.remove(
-                                                            world.trains[i])
-                                                    world.trains[i] = world.trains[i].moveLines(
+                                                if world.cars[i].movingClone in carsToMove:
+                                                    carsToMove.remove(
+                                                        world.cars[i].movingClone)
+                                                    if (world.cars[i].stop is not None
+                                                            and world.cars[i] in world.cars[i].stop.cars):
+                                                        world.cars[i].stop.cars.remove(
+                                                            world.cars[i])
+                                                    world.cars[i] = world.cars[i].moveLines(
                                                         cameraOffset, world.passengerSize)
-                                                # if the train itself is in the list, that means it needs
+                                                # if the car itself is in the list, that means it needs
                                                 # to be removed from the world
-                                                elif world.trains[i] in trainsToMove:
-                                                    trainsToMove.remove(
-                                                        world.trains[i])
-                                                    if world.trains[i] in world.trains[i].stop.trains:
-                                                        world.trains[i].stop.trains.remove(
-                                                            world.trains[i])
-                                                    for carriage in world.trains[i].carriages:
+                                                elif world.cars[i] in carsToMove:
+                                                    carsToMove.remove(
+                                                        world.cars[i])
+                                                    if world.cars[i] in world.cars[i].stop.cars:
+                                                        world.cars[i].stop.cars.remove(
+                                                            world.cars[i])
+                                                    for carriage in world.cars[i].carriages:
                                                         world.carriages.remove(
                                                             carriage)
                                                         world.resources[Game.CARRIAGE] = world.resources[Game.CARRIAGE]+1
-                                                    world.trains[i].line.trains.remove(
-                                                        world.trains[i])
-                                                    world.trains[i].remove(
+                                                    world.cars[i].line.cars.remove(
+                                                        world.cars[i])
+                                                    world.cars[i].remove(
                                                     )
-                                                    world.resources[Game.TRAIN] = world.resources[Game.TRAIN]+1
-                                                    world.trains.pop(i)
+                                                    world.resources[Game.CAR] = world.resources[Game.CAR]+1
+                                                    world.cars.pop(i)
                                         for i in range(len(world.carriages)-1, -1, -1):
-                                            # if the number of passengers on the train is low enough
+                                            # if the number of passengers on the car is low enough
                                             # to take out a carriage:
                                             if (world.carriages[i].head is not None
                                                     and (len(world.carriages[i].findFirst().passengers)
                                                          <= len(world.carriages[i].findFirst().carriages)*6)):
                                                 # move it to another line
-                                                if world.carriages[i].movingClone in trainsToMove:
-                                                    trainsToMove.remove(
+                                                if world.carriages[i].movingClone in carsToMove:
+                                                    carsToMove.remove(
                                                         world.carriages[i].movingClone)
                                                     # find the last carriage to move off
                                                     tail = world.carriages[i].findLast(
                                                     )
-                                                    # destination train
-                                                    train = world.carriages[i].movingClone.head
-                                                    tail.moveLines(train, len(train.carriages),
+                                                    # destination car
+                                                    car = world.carriages[i].movingClone.head
+                                                    tail.moveLines(car, len(car.carriages),
                                                                    cameraOffset, world.passengerSize)
                                                     world.carriages[i].stopMouseMove(
                                                     )
                                                 # remove it
-                                                elif world.carriages[i] in trainsToMove:
-                                                    trainsToMove.remove(
+                                                elif world.carriages[i] in carsToMove:
+                                                    carsToMove.remove(
                                                         world.carriages[i])
                                                     tail = world.carriages[i].findLast(
                                                     )
@@ -993,13 +1007,13 @@ class StartMenu:
 
                                         for line in world.lines:
                                             # remove abandoned segments that are split off lines
-                                            # if there are no trains or carriages on them
+                                            # if there are no cars or carriages on them
                                             for i in range(len(line.abandonedChildren)-1, -1, -1):
                                                 isClear = True
-                                                if len(line.abandonedChildren[i].trains) > 0:
+                                                if len(line.abandonedChildren[i].cars) > 0:
                                                     isClear = False
-                                                for train in line.trains:
-                                                    for carriage in train.carriages:
+                                                for car in line.cars:
+                                                    for carriage in car.carriages:
                                                         if carriage.line == line.abandonedChildren[i]:
                                                             isClear = False
                                                 if isClear:
